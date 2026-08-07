@@ -101,6 +101,9 @@ class SessionSchema(BaseModel):
 class SessionDetailSchema(SessionSchema):
     messages: List[MessageSchema]
 
+class UpdateSessionRequest(BaseModel):
+    title: str
+
 @app.get("/")
 async def root():
     return {"message": "Welcome to the Hermeneutic AI Tutor API"}
@@ -140,6 +143,17 @@ async def chat_endpoint(request: ChatRequest, user: User = Depends(get_current_u
         db.add(user_msg)
         db.commit()
 
+        # Build chat history from previous messages
+        past_messages = db.query(ChatMessage).filter(
+            ChatMessage.session_id == session.id,
+            ChatMessage.id != user_msg.id # exclude the one we just inserted
+        ).order_by(ChatMessage.created_at.asc()).limit(10).all()
+        
+        chat_history_str = ""
+        for msg in past_messages:
+            prefix = "User: " if msg.role == "user" else "AI: "
+            chat_history_str += f"{prefix}{msg.content}\n"
+
         # 1. Generate embedding for the user query
         query_vector = await generate_embedding(request.query)
         
@@ -150,7 +164,7 @@ async def chat_endpoint(request: ChatRequest, user: User = Depends(get_current_u
         llm_response = await generate_response(
             query=request.query, 
             context=context, 
-            chat_history=request.chat_history
+            chat_history=chat_history_str
         )
         
         # Save AI message
@@ -185,3 +199,22 @@ def get_session(session_id: int, user: User = Depends(get_current_user), db: Ses
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
     return session
+
+@app.put("/sessions/{session_id}", response_model=SessionSchema)
+def update_session(session_id: int, req: UpdateSessionRequest, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    session = db.query(ChatSession).filter(ChatSession.id == session_id, ChatSession.user_id == user.id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    session.title = req.title
+    db.commit()
+    db.refresh(session)
+    return session
+
+@app.delete("/sessions/{session_id}")
+def delete_session(session_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    session = db.query(ChatSession).filter(ChatSession.id == session_id, ChatSession.user_id == user.id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    db.delete(session)
+    db.commit()
+    return {"message": "Session deleted"}
