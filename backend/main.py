@@ -1,10 +1,19 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
+from sqlalchemy.orm import Session
+from passlib.context import CryptContext
+import jwt
+from datetime import datetime, timedelta
 
+from core.database import Base, engine, get_db
+from models.user import User
 from services.qdrant_service import init_qdrant, search_documents
 from services.llm_service import generate_embedding, generate_response
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+JWT_SECRET = "super-secret-mock-key"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -13,6 +22,20 @@ async def lifespan(app: FastAPI):
         await init_qdrant()
     except Exception as e:
         print(f"Could not connect to Qdrant on startup: {e}")
+        
+    # Startup: Initialize PostgreSQL and create mock user
+    try:
+        Base.metadata.create_all(bind=engine)
+        db = next(get_db())
+        if not db.query(User).filter(User.username == "student").first():
+            hashed_pwd = pwd_context.hash("password123")
+            new_user = User(username="student", hashed_password=hashed_pwd)
+            db.add(new_user)
+            db.commit()
+            print("Mock user 'student' created.")
+    except Exception as e:
+        print(f"Could not connect to PostgreSQL on startup: {e}")
+        
     yield
     # Shutdown 
 
@@ -34,9 +57,27 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     response: str
 
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+class LoginResponse(BaseModel):
+    token: str
+
 @app.get("/")
 async def root():
     return {"message": "Welcome to the Hermeneutic AI Tutor API"}
+
+@app.post("/auth/login", response_model=LoginResponse)
+def login(request: LoginRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.username == request.username).first()
+    if not user or not pwd_context.verify(request.password, user.hashed_password):
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+    
+    # Create simple JWT
+    expire = datetime.utcnow() + timedelta(days=7)
+    token = jwt.encode({"sub": user.username, "exp": expire}, JWT_SECRET, algorithm="HS256")
+    return LoginResponse(token=token)
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat_endpoint(request: ChatRequest):
