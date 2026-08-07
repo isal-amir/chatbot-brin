@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
@@ -6,14 +6,30 @@ from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 import jwt
 from datetime import datetime, timedelta
+from typing import List, Optional
 
 from core.database import Base, engine, get_db
 from models.user import User
+from models.chat import ChatSession, ChatMessage
 from services.qdrant_service import init_qdrant, search_documents
 from services.llm_service import generate_embedding, generate_response
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 JWT_SECRET = "super-secret-mock-key"
+
+def get_current_user(authorization: str = Header(None), db: Session = Depends(get_db)):
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Invalid authorization header")
+    token = authorization.split(" ")[1]
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+        username = payload.get("sub")
+        user = db.query(User).filter(User.username == username).first()
+        if not user:
+            raise HTTPException(status_code=401, detail="User not found")
+        return user
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -53,9 +69,11 @@ app.add_middleware(
 class ChatRequest(BaseModel):
     query: str
     chat_history: str = "" # Optional formatted chat history
+    session_id: Optional[int] = None
 
 class ChatResponse(BaseModel):
     response: str
+    session_id: int
 
 class LoginRequest(BaseModel):
     username: str
@@ -63,6 +81,25 @@ class LoginRequest(BaseModel):
 
 class LoginResponse(BaseModel):
     token: str
+
+class MessageSchema(BaseModel):
+    role: str
+    content: str
+    created_at: datetime
+
+    class Config:
+        orm_mode = True
+
+class SessionSchema(BaseModel):
+    id: int
+    title: str
+    created_at: datetime
+
+    class Config:
+        orm_mode = True
+
+class SessionDetailSchema(SessionSchema):
+    messages: List[MessageSchema]
 
 @app.get("/")
 async def root():
@@ -80,11 +117,29 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
     return LoginResponse(token=token)
 
 @app.post("/chat", response_model=ChatResponse)
-async def chat_endpoint(request: ChatRequest):
+async def chat_endpoint(request: ChatRequest, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not request.query:
         raise HTTPException(status_code=400, detail="Query cannot be empty")
 
     try:
+        # Create or fetch session
+        if request.session_id:
+            session = db.query(ChatSession).filter(ChatSession.id == request.session_id, ChatSession.user_id == user.id).first()
+            if not session:
+                raise HTTPException(status_code=404, detail="Session not found")
+        else:
+            # Generate a title for the session based on the first query
+            title = request.query[:30] + "..." if len(request.query) > 30 else request.query
+            session = ChatSession(user_id=user.id, title=title)
+            db.add(session)
+            db.commit()
+            db.refresh(session)
+        
+        # Save user message
+        user_msg = ChatMessage(session_id=session.id, role="user", content=request.query)
+        db.add(user_msg)
+        db.commit()
+
         # 1. Generate embedding for the user query
         query_vector = await generate_embedding(request.query)
         
@@ -98,8 +153,35 @@ async def chat_endpoint(request: ChatRequest):
             chat_history=request.chat_history
         )
         
-        return ChatResponse(response=llm_response)
+        # Save AI message
+        ai_msg = ChatMessage(session_id=session.id, role="ai", content=llm_response)
+        db.add(ai_msg)
+        db.commit()
+
+        return ChatResponse(response=llm_response, session_id=session.id)
         
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"Error in chat endpoint: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
+
+@app.get("/sessions", response_model=List[SessionSchema])
+def get_sessions(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    sessions = db.query(ChatSession).filter(ChatSession.user_id == user.id).order_by(ChatSession.created_at.desc()).all()
+    return sessions
+
+@app.post("/sessions", response_model=SessionSchema)
+def create_session(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    session = ChatSession(user_id=user.id)
+    db.add(session)
+    db.commit()
+    db.refresh(session)
+    return session
+
+@app.get("/sessions/{session_id}", response_model=SessionDetailSchema)
+def get_session(session_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    session = db.query(ChatSession).filter(ChatSession.id == session_id, ChatSession.user_id == user.id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return session

@@ -44,3 +44,8 @@ qdrant_storage/
 *.sw?
 .DS_Store
 Thumbs.db
+
+
+# explanation
+sequenceDiagram.txt
+howTo.txt
