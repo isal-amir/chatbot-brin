@@ -11,8 +11,14 @@ from typing import List, Optional
 from core.database import Base, engine, get_db
 from models.user import User
 from models.chat import ChatSession, ChatMessage
-from services.qdrant_service import init_qdrant, search_documents
+from models.knowledge import KnowledgeDocument
+from services.qdrant_service import init_qdrant, search_documents, add_documents_to_qdrant, delete_document_from_qdrant
 from services.llm_service import generate_embedding, generate_response
+import io
+try:
+    from pypdf import PdfReader
+except ImportError:
+    pass # we'll install it
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 JWT_SECRET = "super-secret-mock-key"
@@ -31,6 +37,11 @@ def get_current_user(authorization: str = Header(None), db: Session = Depends(ge
     except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
+def get_admin_user(user: User = Depends(get_current_user)):
+    if not user.is_admin:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    return user
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: Initialize Qdrant collection
@@ -39,7 +50,7 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"Could not connect to Qdrant on startup: {e}")
         
-    # Startup: Initialize PostgreSQL and create mock user
+    # Startup: Initialize PostgreSQL and create mock users
     try:
         Base.metadata.create_all(bind=engine)
         db = next(get_db())
@@ -49,6 +60,13 @@ async def lifespan(app: FastAPI):
             db.add(new_user)
             db.commit()
             print("Mock user 'student' created.")
+            
+        if not db.query(User).filter(User.username == "admin").first():
+            hashed_pwd = pwd_context.hash("password123")
+            admin_user = User(username="admin", hashed_password=hashed_pwd, is_admin=True)
+            db.add(admin_user)
+            db.commit()
+            print("Mock user 'admin' created.")
     except Exception as e:
         print(f"Could not connect to PostgreSQL on startup: {e}")
         
@@ -81,6 +99,23 @@ class LoginRequest(BaseModel):
 
 class LoginResponse(BaseModel):
     token: str
+    is_admin: bool
+
+class DocumentSchema(BaseModel):
+    id: int
+    title: str
+    filename: str
+    created_at: datetime
+
+    class Config:
+        orm_mode = True
+
+class StudentSchema(BaseModel):
+    id: int
+    username: str
+
+    class Config:
+        orm_mode = True
 
 class MessageSchema(BaseModel):
     role: str
@@ -116,8 +151,25 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
     
     # Create simple JWT
     expire = datetime.utcnow() + timedelta(days=7)
-    token = jwt.encode({"sub": user.username, "exp": expire}, JWT_SECRET, algorithm="HS256")
-    return LoginResponse(token=token)
+    token = jwt.encode({"sub": user.username, "exp": expire, "is_admin": user.is_admin}, JWT_SECRET, algorithm="HS256")
+    return LoginResponse(token=token, is_admin=user.is_admin)
+
+@app.post("/auth/register", response_model=LoginResponse)
+def register(request: LoginRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.username == request.username).first()
+    if user:
+        raise HTTPException(status_code=400, detail="Username already registered")
+        
+    hashed_pwd = pwd_context.hash(request.password)
+    new_user = User(username=request.username, hashed_password=hashed_pwd, is_admin=False)
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    
+    # Auto-login after registration
+    expire = datetime.utcnow() + timedelta(days=7)
+    token = jwt.encode({"sub": new_user.username, "exp": expire, "is_admin": False}, JWT_SECRET, algorithm="HS256")
+    return LoginResponse(token=token, is_admin=False)
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat_endpoint(request: ChatRequest, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -218,3 +270,80 @@ def delete_session(session_id: int, user: User = Depends(get_current_user), db: 
     db.delete(session)
     db.commit()
     return {"message": "Session deleted"}
+
+from fastapi import UploadFile, File
+
+@app.get("/admin/documents", response_model=List[DocumentSchema])
+def get_documents(admin: User = Depends(get_admin_user), db: Session = Depends(get_db)):
+    return db.query(KnowledgeDocument).order_by(KnowledgeDocument.created_at.desc()).all()
+
+@app.post("/admin/upload", response_model=DocumentSchema)
+async def upload_document(file: UploadFile = File(...), admin: User = Depends(get_admin_user), db: Session = Depends(get_db)):
+    if not file.filename.endswith('.pdf'):
+        raise HTTPException(status_code=400, detail="Only PDF files are allowed")
+
+    contents = await file.read()
+    
+    # Extract text from PDF
+    try:
+        reader = PdfReader(io.BytesIO(contents))
+        text = ""
+        for page in reader.pages:
+            text += page.extract_text() + "\n"
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to read PDF: {e}")
+
+    # Chunk the text (simple approach: split by double newlines or chunks of 1000 chars)
+    # Using a simple chunker of 1000 characters
+    chunk_size = 1000
+    chunks = [text[i:i+chunk_size] for i in range(0, len(text), chunk_size)]
+    
+    # Generate embeddings
+    embeddings = []
+    for chunk in chunks:
+        # Avoid embedding tiny empty chunks
+        if len(chunk.strip()) > 10:
+            emb = await generate_embedding(chunk)
+            embeddings.append((chunk, emb))
+    
+    # Create document record
+    doc = KnowledgeDocument(title=file.filename, filename=file.filename)
+    db.add(doc)
+    db.commit()
+    db.refresh(doc)
+    
+    # Add to Qdrant
+    if embeddings:
+        valid_chunks = [item[0] for item in embeddings]
+        valid_embs = [item[1] for item in embeddings]
+        await add_documents_to_qdrant(valid_chunks, valid_embs, doc.id, doc.title)
+    
+    return doc
+
+@app.delete("/admin/documents/{doc_id}")
+async def delete_document(doc_id: int, admin: User = Depends(get_admin_user), db: Session = Depends(get_db)):
+    doc = db.query(KnowledgeDocument).filter(KnowledgeDocument.id == doc_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+        
+    # Delete from Qdrant
+    await delete_document_from_qdrant(doc_id)
+    
+    # Delete from PG
+    db.delete(doc)
+    db.commit()
+    return {"message": "Document deleted"}
+
+@app.get("/admin/students", response_model=List[StudentSchema])
+def get_students(admin: User = Depends(get_admin_user), db: Session = Depends(get_db)):
+    return db.query(User).filter(User.is_admin == False).all()
+
+@app.delete("/admin/students/{user_id}")
+def delete_student(user_id: int, admin: User = Depends(get_admin_user), db: Session = Depends(get_db)):
+    student = db.query(User).filter(User.id == user_id, User.is_admin == False).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+        
+    db.delete(student)
+    db.commit()
+    return {"message": "Student deleted"}
