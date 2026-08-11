@@ -20,6 +20,7 @@ services:
     environment:
       # If NEXT_PUBLIC_API_URL is empty, it makes relative requests which nginx will proxy correctly
       - NODE_ENV=production
+      - HOSTNAME=0.0.0.0
     expose:
       - "3000"
     restart: always
