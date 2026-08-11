@@ -27,7 +27,8 @@ export default function LoginPage() {
     try {
       const hostname = window.location.hostname;
       const endpoint = isLogin ? 'login' : 'register';
-      const response = await fetch(`http://${hostname}:8000/auth/${endpoint}`, {
+      const port = process.env.NODE_ENV === 'production' ? '' : ':8000';
+      const response = await fetch(`http://${hostname}${port}/auth/${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })

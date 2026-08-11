@@ -40,7 +40,8 @@ export default function AdminPage() {
     try {
       const hostname = window.location.hostname;
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://${hostname}:8000/admin/students`, {
+      const port = process.env.NODE_ENV === 'production' ? '' : ':8000';
+      const response = await fetch(`http://${hostname}${port}/admin/students`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -58,7 +59,8 @@ export default function AdminPage() {
     try {
       const hostname = window.location.hostname;
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://${hostname}:8000/admin/documents`, {
+      const port = process.env.NODE_ENV === 'production' ? '' : ':8000';
+      const response = await fetch(`http://${hostname}${port}/admin/documents`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -100,7 +102,8 @@ export default function AdminPage() {
     try {
       const hostname = window.location.hostname;
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://${hostname}:8000/admin/upload`, {
+      const port = process.env.NODE_ENV === 'production' ? '' : ':8000';
+      const response = await fetch(`http://${hostname}${port}/admin/upload`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -138,7 +141,8 @@ export default function AdminPage() {
     try {
       const hostname = window.location.hostname;
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://${hostname}:8000/admin/documents/${id}`, {
+      const port = process.env.NODE_ENV === 'production' ? '' : ':8000';
+      const response = await fetch(`http://${hostname}${port}/admin/documents/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -160,7 +164,8 @@ export default function AdminPage() {
     try {
       const hostname = window.location.hostname;
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://${hostname}:8000/admin/students/${id}`, {
+      const port = process.env.NODE_ENV === 'production' ? '' : ':8000';
+      const response = await fetch(`http://${hostname}${port}/admin/students/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

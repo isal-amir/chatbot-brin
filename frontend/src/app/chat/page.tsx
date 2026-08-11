@@ -48,7 +48,8 @@ export default function Chat() {
     try {
       const hostname = window.location.hostname;
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://${hostname}:8000/sessions`, {
+      const port = process.env.NODE_ENV === 'production' ? '' : ':8000';
+      const response = await fetch(`http://${hostname}${port}/sessions`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
@@ -66,7 +67,8 @@ export default function Chat() {
     try {
       const hostname = window.location.hostname;
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://${hostname}:8000/sessions/${sessionId}`, {
+      const port = process.env.NODE_ENV === 'production' ? '' : ':8000';
+      const response = await fetch(`http://${hostname}${port}/sessions/${sessionId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
@@ -91,7 +93,8 @@ export default function Chat() {
     try {
       const hostname = window.location.hostname;
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://${hostname}:8000/sessions/${sessionId}`, {
+      const port = process.env.NODE_ENV === 'production' ? '' : ':8000';
+      const response = await fetch(`http://${hostname}${port}/sessions/${sessionId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -115,7 +118,8 @@ export default function Chat() {
     try {
       const hostname = window.location.hostname;
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://${hostname}:8000/sessions/${sessionId}`, {
+      const port = process.env.NODE_ENV === 'production' ? '' : ':8000';
+      const response = await fetch(`http://${hostname}${port}/sessions/${sessionId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -159,7 +163,8 @@ export default function Chat() {
         payload.session_id = currentSessionId;
       }
 
-      const response = await fetch(`http://${hostname}:8000/chat`, {
+      const port = process.env.NODE_ENV === 'production' ? '' : ':8000';
+      const response = await fetch(`http://${hostname}${port}/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
