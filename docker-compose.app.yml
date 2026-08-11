@@ -34,7 +34,8 @@ services:
       - QDRANT_HOST=10.184.0.2
       - QDRANT_PORT=6333
       # Hardcoded API key (no quotes or ${} syntax needed in docker-compose)
-      - GEMINI_API_KEY=AQ.Ab8RN6Jv98IzR-E1EYgJbbup2sFawjNoUT2WMPLops_JC-Vj7Q
+      - GEMINI_API_KEY=
+      - OPENROUTER_API_KEY=
     expose:
       - "8000"
     restart: always
