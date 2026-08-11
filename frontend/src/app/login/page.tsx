@@ -28,7 +28,8 @@ export default function LoginPage() {
       const hostname = window.location.hostname;
       const endpoint = isLogin ? 'login' : 'register';
       const port = process.env.NODE_ENV === 'production' ? '' : ':8000';
-      const response = await fetch(`http://${hostname}${port}/auth/${endpoint}`, {
+      const apiPrefix = process.env.NODE_ENV === 'production' ? '/api' : '';
+      const response = await fetch(`http://${hostname}${port}${apiPrefix}/auth/${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })

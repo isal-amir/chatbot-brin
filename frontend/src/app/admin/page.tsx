@@ -41,7 +41,8 @@ export default function AdminPage() {
       const hostname = window.location.hostname;
       const token = localStorage.getItem('token');
       const port = process.env.NODE_ENV === 'production' ? '' : ':8000';
-      const response = await fetch(`http://${hostname}${port}/admin/students`, {
+      const apiPrefix = process.env.NODE_ENV === 'production' ? '/api' : '';
+      const response = await fetch(`http://${hostname}${port}${apiPrefix}/admin/students`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -60,7 +61,8 @@ export default function AdminPage() {
       const hostname = window.location.hostname;
       const token = localStorage.getItem('token');
       const port = process.env.NODE_ENV === 'production' ? '' : ':8000';
-      const response = await fetch(`http://${hostname}${port}/admin/documents`, {
+      const apiPrefix = process.env.NODE_ENV === 'production' ? '/api' : '';
+      const response = await fetch(`http://${hostname}${port}${apiPrefix}/admin/documents`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -103,7 +105,8 @@ export default function AdminPage() {
       const hostname = window.location.hostname;
       const token = localStorage.getItem('token');
       const port = process.env.NODE_ENV === 'production' ? '' : ':8000';
-      const response = await fetch(`http://${hostname}${port}/admin/upload`, {
+      const apiPrefix = process.env.NODE_ENV === 'production' ? '/api' : '';
+      const response = await fetch(`http://${hostname}${port}${apiPrefix}/admin/upload`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -142,7 +145,8 @@ export default function AdminPage() {
       const hostname = window.location.hostname;
       const token = localStorage.getItem('token');
       const port = process.env.NODE_ENV === 'production' ? '' : ':8000';
-      const response = await fetch(`http://${hostname}${port}/admin/documents/${id}`, {
+      const apiPrefix = process.env.NODE_ENV === 'production' ? '/api' : '';
+      const response = await fetch(`http://${hostname}${port}${apiPrefix}/admin/documents/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -165,7 +169,8 @@ export default function AdminPage() {
       const hostname = window.location.hostname;
       const token = localStorage.getItem('token');
       const port = process.env.NODE_ENV === 'production' ? '' : ':8000';
-      const response = await fetch(`http://${hostname}${port}/admin/students/${id}`, {
+      const apiPrefix = process.env.NODE_ENV === 'production' ? '/api' : '';
+      const response = await fetch(`http://${hostname}${port}${apiPrefix}/admin/students/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

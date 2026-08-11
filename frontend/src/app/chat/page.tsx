@@ -49,7 +49,8 @@ export default function Chat() {
       const hostname = window.location.hostname;
       const token = localStorage.getItem('token');
       const port = process.env.NODE_ENV === 'production' ? '' : ':8000';
-      const response = await fetch(`http://${hostname}${port}/sessions`, {
+      const apiPrefix = process.env.NODE_ENV === 'production' ? '/api' : '';
+      const response = await fetch(`http://${hostname}${port}${apiPrefix}/sessions`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
@@ -68,7 +69,8 @@ export default function Chat() {
       const hostname = window.location.hostname;
       const token = localStorage.getItem('token');
       const port = process.env.NODE_ENV === 'production' ? '' : ':8000';
-      const response = await fetch(`http://${hostname}${port}/sessions/${sessionId}`, {
+      const apiPrefix = process.env.NODE_ENV === 'production' ? '/api' : '';
+      const response = await fetch(`http://${hostname}${port}${apiPrefix}/sessions/${sessionId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
@@ -94,7 +96,8 @@ export default function Chat() {
       const hostname = window.location.hostname;
       const token = localStorage.getItem('token');
       const port = process.env.NODE_ENV === 'production' ? '' : ':8000';
-      const response = await fetch(`http://${hostname}${port}/sessions/${sessionId}`, {
+      const apiPrefix = process.env.NODE_ENV === 'production' ? '/api' : '';
+      const response = await fetch(`http://${hostname}${port}${apiPrefix}/sessions/${sessionId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -119,7 +122,8 @@ export default function Chat() {
       const hostname = window.location.hostname;
       const token = localStorage.getItem('token');
       const port = process.env.NODE_ENV === 'production' ? '' : ':8000';
-      const response = await fetch(`http://${hostname}${port}/sessions/${sessionId}`, {
+      const apiPrefix = process.env.NODE_ENV === 'production' ? '/api' : '';
+      const response = await fetch(`http://${hostname}${port}${apiPrefix}/sessions/${sessionId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -164,7 +168,8 @@ export default function Chat() {
       }
 
       const port = process.env.NODE_ENV === 'production' ? '' : ':8000';
-      const response = await fetch(`http://${hostname}${port}/chat`, {
+      const apiPrefix = process.env.NODE_ENV === 'production' ? '/api' : '';
+      const response = await fetch(`http://${hostname}${port}${apiPrefix}/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
