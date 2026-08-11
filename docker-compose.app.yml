@@ -29,11 +29,12 @@ services:
       context: ./backend
     container_name: chatbot_backend
     environment:
-      # UPDATE THESE TO VM2'S INTERNAL IP ADDRESS AFTER PROVISIONING!
-      - DATABASE_URL=postgresql://chatbot_user:chatbot_password@DATA_VM_IP:5432/chatbot_db
-      - QDRANT_HOST=DATA_VM_IP
+      # These point to the Internal IP of VM 2 (Data Tier)
+      - DATABASE_URL=postgresql://chatbot_user:chatbot_password@10.184.0.2:5432/chatbot_db
+      - QDRANT_HOST=10.184.0.2
       - QDRANT_PORT=6333
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      # Hardcoded API key (no quotes or ${} syntax needed in docker-compose)
+      - GEMINI_API_KEY=AQ.Ab8RN6Jv98IzR-E1EYgJbbup2sFawjNoUT2WMPLops_JC-Vj7Q
     expose:
       - "8000"
     restart: always
