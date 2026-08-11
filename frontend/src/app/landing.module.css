@@ -1,0 +1,126 @@
+.container {
+  min-height: 100vh;
+  background-color: var(--background);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 20px;
+}
+
+.main {
+  max-width: 900px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 60px;
+}
+
+.heroSection {
+  text-align: center;
+  margin-top: 40px;
+  animation: fadeInDown 0.6s ease-out forwards;
+}
+
+.iconContainer {
+  font-size: 5rem;
+  margin-bottom: 20px;
+}
+
+.title {
+  color: var(--primary-color);
+  font-size: 3.5rem;
+  font-weight: 800;
+  margin-bottom: 16px;
+  letter-spacing: -1px;
+}
+
+.subtitle {
+  color: var(--text-main);
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 24px;
+}
+
+.description {
+  color: var(--text-light);
+  font-size: 1.1rem;
+  line-height: 1.6;
+  max-width: 600px;
+  margin: 0 auto 40px auto;
+}
+
+.actionContainer {
+  display: flex;
+  justify-content: center;
+}
+
+.primaryButton {
+  display: inline-block;
+  background-color: var(--primary-color);
+  color: white;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 1.2rem;
+  padding: 16px 32px;
+  border-radius: 16px;
+  box-shadow: 0 4px 0 #4a9d20;
+  transition: all 0.1s;
+}
+
+.primaryButton:active {
+  transform: translateY(4px);
+  box-shadow: 0 0 0 #4a9d20;
+}
+
+.featuresSection {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 24px;
+  animation: fadeInUp 0.8s ease-out forwards;
+}
+
+.featureCard {
+  background: white;
+  padding: 30px;
+  border-radius: 24px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+  text-align: left;
+  border: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.featureCard:hover {
+  border-color: var(--secondary-color);
+  transform: translateY(-5px);
+}
+
+.featureCard h3 {
+  color: var(--text-main);
+  margin-bottom: 12px;
+  font-size: 1.2rem;
+}
+
+.featureCard p {
+  color: var(--text-light);
+  line-height: 1.5;
+  font-size: 0.95rem;
+}
+
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 600px) {
+  .title {
+    font-size: 2.5rem;
+  }
+  .subtitle {
+    font-size: 1.2rem;
+  }
+}

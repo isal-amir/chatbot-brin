@@ -1,0 +1,35 @@
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap');
+
+:root {
+  --bg-color: #f0f8ff; /* Alice Blue */
+  --primary-color: #7B61FF; /* Vibrant Purple */
+  --secondary-color: #00D2D3; /* Cyan */
+  --accent-color: #FF9F43; /* Orange */
+  --text-main: #2d3436;
+  --text-light: #636e72;
+  --bubble-user: #7B61FF;
+  --bubble-ai: #ffffff;
+  --font-family: 'Quicksand', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font-family);
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  background-image: 
+    radial-gradient(at 40% 20%, rgba(123, 97, 255, 0.1) 0px, transparent 50%),
+    radial-gradient(at 80% 0%, rgba(0, 210, 211, 0.15) 0px, transparent 50%),
+    radial-gradient(at 0% 50%, rgba(255, 159, 67, 0.1) 0px, transparent 50%);
+  background-attachment: fixed;
+  min-height: 100vh;
+}
+
+button, input {
+  font-family: var(--font-family);
+}
