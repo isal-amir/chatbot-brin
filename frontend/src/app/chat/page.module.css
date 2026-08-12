@@ -123,6 +123,12 @@
   transition: all 0.3s ease;
   background-color: #f8f9fa;
   min-width: 0;
+  resize: none;
+  overflow-y: auto;
+  min-height: 54px;
+  max-height: 150px;
+  font-family: inherit;
+  line-height: 1.5;
 }
 
 .inputField:focus {

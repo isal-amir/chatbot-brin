@@ -321,12 +321,22 @@ export default function Chat() {
             </div>
 
             <form className={styles.inputArea} onSubmit={handleSend}>
-              <input
-                type="text"
+              <textarea
                 className={styles.inputField}
                 placeholder="Ketik pertanyaanmu di sini..."
                 ref={inputRef}
                 disabled={isLoading}
+                rows={1}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend(e);
+                  }
+                }}
+                onChange={(e) => {
+                  e.target.style.height = 'auto';
+                  e.target.style.height = `${Math.min(e.target.scrollHeight, 150)}px`;
+                }}
               />
               <button
                 type="submit"
